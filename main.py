@@ -4,9 +4,9 @@ import glfw
 from OpenGL import GL
 import skia
 from enum import Enum, auto
-from skia import Color, GrDirectContext, GrGLFramebufferInfo, GrBackendRenderTarget, kBottomLeft_GrSurfaceOrigin, \
-    kRGBA_8888_ColorType, ColorSpace
-from ..shared_math.geometry import vec2
+from skia import *
+import uuid
+from shared_python.shared_math.geometry import vec2
 
 WIDTH, HEIGHT = 640, 480
 UI_TOP_BAR_HEIGHT = 32
@@ -15,17 +15,19 @@ BUTTON_MARGIN = 6
 
 
 class MOUSE_ACTION(Enum):
-    LEFT_CLICK_DOWN = auto()
-    LEFT_CLICK_UP = auto()
+    LEFT_CLICK_DOWN = auto(),
+    LEFT_CLICK_DRAG = auto(),
+    LEFT_CLICK_UP = auto(),
+    RIGHT_CLICK_DOWN = auto(),
 
 
 class draggable():
     def __init__(self, start_pos: vec2, dragging_shape: shape) -> None:
         self.current_pos = start_pos
-        self.shape = shape
+        self.shape = dragging_shape
 
     def work(self, pos: vec2):
-        distance = self.current_pos - pos
+        distance = pos - self.current_pos
         self.current_pos = pos
         self.shape.translate(distance)
 
@@ -69,8 +71,7 @@ class DrawArea:
         self.height = height
         self.scene = Scene()
         self.toolbar = Toolbar(
-            0,
-            HEIGHT - UI_TOP_BAR_HEIGHT,
+            vec2(0, HEIGHT - UI_TOP_BAR_HEIGHT),
             [Button("select", BUTTON_SIZE, Color(200, 200, 200)),
              Button("delete", BUTTON_SIZE, Color(200, 200, 200))])
 
@@ -85,18 +86,28 @@ class DrawArea:
         self.toolbar.draw(canvas)
 
     def mouse_button_callback(self, window, button, action, mods):
+        x, y = glfw.get_cursor_pos(window)
+        pos = vec2(x, y)
+
         if button == glfw.MOUSE_BUTTON_LEFT:
             if action == glfw.PRESS:
-                x, y = glfw.get_cursor_pos(window)
-                pos = vec2(x, y)
                 clicked_button = self.toolbar.hit_test(pos)
                 if clicked_button:
                     clicked_button.click()
                 else:
-                    self.scene.mouse_action(MOUSE_ACTION, pos)
+                    self.scene.mouse_action(MOUSE_ACTION.LEFT_CLICK_DOWN, pos)
 
             elif action == glfw.RELEASE:
-                pass
+                self.scene.mouse_action(MOUSE_ACTION.LEFT_CLICK_UP, pos)
+
+        if button == glfw.MOUSE_BUTTON_RIGHT:
+            if action == glfw.RELEASE:
+                self.add_shape(Shape(pos, 40, color))
+
+    def cursor_pos_callback(self, window, xpos, ypos):
+        if glfw.get_mouse_button(window, glfw.MOUSE_BUTTON_LEFT) == glfw.PRESS:
+            pos = vec2(xpos, ypos)
+            self.scene.mouse_action(MOUSE_ACTION.LEFT_CLICK_DRAG, pos)
 
     @staticmethod
     @contextlib.contextmanager
@@ -158,10 +169,11 @@ class Shape:
         self.pos = pos
         self.radius = radius
         self.color = color
+        self.id = uuid.uuid4()
 
-    def hit_test(self, point_x, point_y):
-        distance = ((point_x - self.pos.x) ** 2 +
-                    (point_y - self.pos.y) ** 2) ** 0.5
+    def contains(self, pos: vec2):
+        distance = ((pos.x - self.pos.x) ** 2 +
+                    (pos.y - self.pos.y) ** 2) ** 0.5
         return distance <= self.radius
 
     def translate(self, pos: vec2):
@@ -196,10 +208,19 @@ class Scene:
                         if this_shape.contains(pos):
                             self.selected = this_shape
                             return True
-                elif self.draggable is None:
+
+            case MOUSE_ACTION.LEFT_CLICK_DRAG:
+                if self.selected is None:
+                    return False
+
+                if self.draggable is None:
                     self.draggable = draggable(pos, self.selected)
                 else:
                     self.draggable.work(pos)
+
+            case MOUSE_ACTION.LEFT_CLICK_UP:
+                self.draggable = None
+                self.selected = None
 
 
 class Wmain:
@@ -216,6 +237,9 @@ class Wmain:
         with self.glfw_window() as window:
             glfw.set_mouse_button_callback(
                 window, self.draw_area.mouse_button_callback)
+
+            glfw.set_cursor_pos_callback(
+                window, self.draw_area.cursor_pos_callback)
 
             while not glfw.window_should_close(window):
                 GL.glClear(GL.GL_COLOR_BUFFER_BIT)
@@ -243,6 +267,6 @@ class Wmain:
 
 wmain = Wmain()
 color = Color(0, 255, 0)
-shape = Shape(55, 55, 40, color)
+shape = Shape(vec2(55, 55), 40, color)
 wmain.add_shape(shape)
 wmain.run()
