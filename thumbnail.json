@@ -1,0 +1,7 @@
+{
+	"title": "A Basic 2D Vector Graphics App",
+	"image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Bezier_curve.svg/1200px-Bezier_curve.svg.png",
+	"description": "A very basic app to show off OpenGL with vector graphics",
+	"language": ["Python","OpenGL"],
+	"language_bg": ["#3572A5","#5586A4"]
+}
