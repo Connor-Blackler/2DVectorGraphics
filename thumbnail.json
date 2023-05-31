@@ -1,6 +1,6 @@
 {
 	"title": "A Basic 2D Vector Graphics App",
-	"image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Bezier_curve.svg/1200px-Bezier_curve.svg.png",
+	"image": "https://www.researchgate.net/profile/Kevin-Qiu-2/publication/337505175/figure/fig1/AS:831784350666752@1575324251486/Rational-cubic-Bezier-curve-A-rational-cubic-Bezier-curve-is-most-commonly-defined-by-two.ppm",
 	"description": "A very basic app to show off OpenGL with vector graphics",
 	"language": ["Python","OpenGL"],
 	"language_bg": ["#3572A5","#5586A4"]
